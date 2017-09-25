@@ -10,17 +10,20 @@ Yimin Xu
 #include <stdio.h>
 #include <math.h>
 
+//Error handling
 static void error_callback(int error, const char* description)
 {
     fputs(description, stderr);
 }
+
+//Type Q to close the window
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    if (key == GLFW_KEY_Q && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-//Function to set a pixel
+//Set a pixel to black
 void set_pixel(int x, int y)
 {
     glBegin(GL_POINTS);
@@ -29,11 +32,10 @@ void set_pixel(int x, int y)
     glEnd();
 }
 
-//Bresenham
+//Draw a line from (x1,y1) to (x2,y2), following Bresenham Algorithm
 void Bresenham(int x1, int y1, int x2, int y2)
 {
-    int ox1 = x1, oy1 = y1, ox2 = x2, oy2 = y2;
-
+    //In case there is no slope
     if (x1 == x2)
     {
         int s;
@@ -52,6 +54,7 @@ void Bresenham(int x1, int y1, int x2, int y2)
             set_pixel(x1,s);
     }
 
+    //Make x1 < x2 and if the two points are swapped, change it back at the end
     bool swapped = false;
     int temp1, temp2;
     if (x1 > x2)
@@ -65,6 +68,7 @@ void Bresenham(int x1, int y1, int x2, int y2)
         y2 = temp2;
     }
 
+    //In case the slope is negative
     bool neg_slope = false;
     if (y1 > y2)
         neg_slope = true;
@@ -72,7 +76,8 @@ void Bresenham(int x1, int y1, int x2, int y2)
     int p;
     int dx = abs(x2 - x1);
     int dy = abs(y2 - y1);
-    //printf("x1 = %d, y1 = %d, x2 = %d, y2 = %d\n", x1,y1,x2,y2);
+
+    //Abs of slope is smaller than 1
     if (abs(dy) <= abs(dx))
     {
         set_pixel(x1, y1);
@@ -91,18 +96,18 @@ void Bresenham(int x1, int y1, int x2, int y2)
                 else
                 {
                     p = p + 2 * dy - 2 * dx;
+                    //If the slope is positive, go up, otherwise, go down
                     if (!neg_slope)
                         y1 ++;
                     else
                         y1 --;
                 }
                 x1 ++;
-                //printf("Set pixel (%d,%d)\n",x1,y1);
 
                 set_pixel(x1, y1);
             }
         }
-    }else
+    }else //Abs of slope greater than 1, swap x and y, basically the same
     {
         set_pixel(x1, y1);
 
@@ -125,7 +130,6 @@ void Bresenham(int x1, int y1, int x2, int y2)
                     y1 --;
                 else
                     y1 ++;
-                //printf("Set pixel (%d,%d)\n",x1,y1);
 
                 set_pixel(x1, y1);
             }
@@ -154,9 +158,6 @@ void Bresenham(int x1, int y1, int x2, int y2)
         x2 = temp1;
         y2 = temp2;
     }
-
-    //if (x2 != ox2 || y2 != oy2)
-        //printf("x2 = %d, ox2 = %d, y2 = %d, oy2 = %d\n", x2, ox2, y2, oy2);
 }
 
 int main(void)
@@ -176,14 +177,8 @@ int main(void)
     }
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
-    bool done = false;
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float) height;
-        glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         //Set background color to white
         glClearColor(255,255,255,0);
@@ -203,15 +198,8 @@ int main(void)
             t += dt;
             int x2 = 256 + (int) 100.0 * (1.5 * cos(t) - cos(13.0 * t));
             int y2 = 256 + (int) 100.0 * (1.5 * sin(t) - sin(13.0 * t));
-            //if (!done)
-                //printf("Input: (%d,%d),(%d,%d)\n", x1,y1,x2,y2);
             Bresenham(x1,y1,x2,y2);
         }
-        done = true;
-
-
-        //Bresenham(0, 50, 300,0);
-        //Bresenham(100,300,300,0);
 
         glFlush();
 
