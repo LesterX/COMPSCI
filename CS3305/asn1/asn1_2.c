@@ -1,3 +1,8 @@
+/* Computer Science 3305
+ * Assignment 1
+ * Yimin Xu
+ * 250876566 */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -5,6 +10,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <wait.h>
+
+/* Comment is actually shown in the output...so...you know... */
 
 int main()
 {
@@ -24,7 +31,6 @@ int main()
 	else if (pid == 0)
 	{
 		//Child
-        printf("parent (PID %d) created a child (PID %d)\n",getppid(),getpid());
         close(fd[0]);
 		printf("child (PID %d) Reading Y = ",getpid());
         scanf(" %s", in_Y);
@@ -34,15 +40,16 @@ int main()
 	}else
 	{
 		//Parent
+        printf("parent (PID %d) created a child (PID %d)\n",getpid(),pid);
+        wait(NULL);
         close(fd[1]);
 		printf("parent (PID %d) Reading X = ",getpid());
         scanf(" %s", in_X);
         printf(" from the user\n");
 		X = atoi(in_X);
-        wait(NULL);
         read(fd[0],in_Y,100);
         printf("parent (PID %d) Reading Y from the pipe (Y = %s)\n",getpid(),in_Y);
         Y = atoi(in_Y);
-		printf("parent (PID %d) adding X + Y = %d",getpid(),X + Y);
+		printf("parent (PID %d) adding X + Y = %d\n",getpid(),X + Y);
 	}
 }
