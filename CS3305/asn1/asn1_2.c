@@ -34,12 +34,12 @@ int main()
 	}else
 	{
 		//Parent
-        wait(NULL);
         close(fd[1]);
 		printf("parent (PID %d) Reading X = ",getpid());
         scanf(" %s", in_X);
         printf(" from the user\n");
 		X = atoi(in_X);
+        wait(NULL);
         read(fd[0],in_Y,100);
         printf("parent (PID %d) Reading Y from the pipe (Y = %s)\n",getpid(),in_Y);
         Y = atoi(in_Y);
