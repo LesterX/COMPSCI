@@ -149,15 +149,7 @@ int main() {
     
     while (1) {
         XNextEvent(d, &e) ;
-        if (e.type == Expose)
-            for (t = 0.0 ; t < 2.0*M_PI;) {
-                x1 = 256 + (int)100.0*(1.5*cos(t) - cos(13.0*t)) ;
-                y1 = 256 + (int)100.0*(1.5*sin(t) - sin(13.0*t)) ;
-                t += dt ;
-                x2 = 256 + (int)100.0*(1.5*cos(t) - cos(13.0*t)) ;
-                y2 = 256 + (int)100.0*(1.5*sin(t) - sin(13.0*t)) ;
-                Bresenham(d,w,s,x1,y1,x2,y2) ;
-            }
+        
         if(e.type == KeyPress)
             break ;
         if(e.type == ClientMessage)
