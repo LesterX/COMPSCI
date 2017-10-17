@@ -3,6 +3,10 @@
    Yimin Xu
    250876566 */
 
+/* My work starts at line 317 ,
+   before that is Brensenham 
+   and camera.c from the website*/
+
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -310,7 +314,7 @@ int main()
     
     SetCurrentColorX(d, &(DefaultGC(d, s)), r, g, b) ;
 
-    //Start to draw
+    //Here's my work
 	
 	double radius = 5.0; //Radius of the sphere
     double dt = 2.0 * M_PI / 20.0; //Change in Longitude
