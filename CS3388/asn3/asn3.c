@@ -38,8 +38,9 @@
 #define W  1024
 #define H  1024
 
-#define LX -30.0
-#define LY 30.0
+//Define the position of the light source
+#define LX 30.0
+#define LY -30.0
 #define LZ 30.0
 
 dmatrix_t *build_camera_matrix(dmatrix_t *E, dmatrix_t *G) {
@@ -262,7 +263,9 @@ double find_angle(dmatrix_t l1, dmatrix_t l2)
     double y2 = l2.m[2][1];
     double z2 = l2.m[3][1];
 
-    return (x1 * x2 + y1 * y2 + z1 * z2) / (sqrt(x1 * x1 + y1 * y1 + z1 * z1) * sqrt(x2 * x2 + y2 * y2 + z2 * z1));
+    double result = (x1 * x2 + y1 * y2 + z1 * z2) / (sqrt(x1 * x1 + y1 * y1 + z1 * z1) * sqrt(x2 * x2 + y2 * y2 + z2 * z2));
+
+    return result;
 }
 
 //Return 1 if the angle between eye sight and normal vactor is greater than 90 degree
@@ -485,7 +488,6 @@ void set_color(Display *d, Window w, int s, dmatrix_t C, int r, int g, int b, do
     SetCurrentColorX(d, &(DefaultGC(d, s)), r * intensity, g * intensity, b * intensity);
     
     //Draw parallel lines from p1p2 to p3p4
-    //Issue: p1p2 and p3p4 are not necessarily parallel, might miss some points
     double d_x = (x4 - x1) / 100;
     double d_y = (y4 - y1) / 100;
     double d_z = (z4 - z1) / 100;
@@ -632,13 +634,10 @@ void draw_cone(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, dmatrix_t 
             double x2 = ((h - u) / h) * r * cos(c_t);
             double y2 = ((h - u) / h) * r * sin(c_t) + 30;
             double z2 = u;
-
             
-
             double x3 = ((h - u - c_du) / h) * r * cos(c_t);
             double y3 = ((h - u - c_du) / h) * r * sin(c_t) + 30;
             double z3 = u + c_du;
-            
 
             dmatrix_t center;
             dmat_alloc(&center, 4, 1);
@@ -649,7 +648,6 @@ void draw_cone(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, dmatrix_t 
             set_xyz(mid,(x1 + x3) / 2, (y1 + y3) / 2, (z1 + z3) / 2);
 
             dmatrix_t outward = get_line(center, mid);
-
 
             dmatrix_t normal = find_normal(x3,y3,z3,x2,y2,z2,x1,y1,z1);
                 
@@ -724,7 +722,7 @@ int main()
         double radius_a = 2.0; // Radius of the tube
         double radius_c = 8.0; // Radius from the center of the hole to the center of the tube
         double t_du = M_PI / 30; // Change around the center of the tube
-        double t_dv = M_PI / 60; // Change around the center of the hole
+        double t_dv = M_PI / 100; // Change around the center of the hole
 
         draw_torus(d,w,s,C,E,light,radius_a,radius_c,t_du,t_dv);
 
