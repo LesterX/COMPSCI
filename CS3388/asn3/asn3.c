@@ -38,7 +38,7 @@
 #define W  1024
 #define H  1024
 
-#define LX 30.0
+#define LX -30.0
 #define LY 30.0
 #define LZ 30.0
 
@@ -207,6 +207,7 @@ void exchangeInt(int *a, int *b)
     *b = t ;
 }
 
+//Set the value of x,y,z to vector p
 void set_xyz(dmatrix_t p, double x, double y, double z)
 {
     p.m[1][1] = x;
@@ -215,6 +216,7 @@ void set_xyz(dmatrix_t p, double x, double y, double z)
     p.m[4][1] = 1;
 }
 
+//Return the line vector p1p2
 dmatrix_t get_line(dmatrix_t p1, dmatrix_t p2)
 {
     dmatrix_t p;
@@ -227,6 +229,7 @@ dmatrix_t get_line(dmatrix_t p1, dmatrix_t p2)
     return p;
 }
 
+//Return the normal of the surface made up of 3 (actually 4) points
 dmatrix_t find_normal(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3)
 {
     double l1x = x2 - x1;
@@ -240,6 +243,7 @@ dmatrix_t find_normal(double x1, double y1, double z1, double x2, double y2, dou
     dmatrix_t result;
     dmat_alloc(&result,4,1);
     
+    //Multiply 10000 in case the number is too small
     result.m[1][1] = 10000 * (l1y * l2z - l1z * l2y);
     result.m[2][1] = 10000 * (l1z * l2x - l1x * l2z);
     result.m[3][1] = 10000 * (l1x * l2y - l1y * l2x);
@@ -248,6 +252,7 @@ dmatrix_t find_normal(double x1, double y1, double z1, double x2, double y2, dou
     return result;
 }
 
+//Return the cos value of the angle between vector l1 and l2
 double find_angle(dmatrix_t l1, dmatrix_t l2)
 {
     double x1 = l1.m[1][1];
@@ -260,6 +265,7 @@ double find_angle(dmatrix_t l1, dmatrix_t l2)
     return (x1 * x2 + y1 * y2 + z1 * z2) / (sqrt(x1 * x1 + y1 * y1 + z1 * z1) * sqrt(x2 * x2 + y2 * y2 + z2 * z1));
 }
 
+//Return 1 if the angle between eye sight and normal vactor is greater than 90 degree
 int backside(dmatrix_t E, dmatrix_t normal)
 {
     if (find_angle(E,normal) < 0)
@@ -278,53 +284,6 @@ double max(double n1, double n2)
 {
     if (n1 > n2) return n1;
     else return n2;
-}
-
-int intersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
-{
-    double slope1 = (y2 - y1) / (x2 - x1);
-    double intercept1 = y1 - x1 * slope1;
-    double slope2 = (y4 - y3) / (x4 - x3);
-    double intercept2 = y3 - x3 * slope2;
-    double intersect_x = (intercept2 - intercept1) / (slope1 - slope2);
-    double intersect_y = ((intercept2 - intercept1) / (slope1 - slope2)) * slope1 + intercept1;
-
-    if (intersect_x > min(x1,x2) && intersect_x > min(x3,x4) && intersect_x < max(x1,x2) && intersect_x < max(x3,x4) && intersect_y > min(y1,y2) && intersect_y > min (y3,y4) && intersect_y < max(y1,y2) && intersect_y < max(y3,y4))
-        return 1;
-    else
-        return 0;
-}
-
-int inside_polygon(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3)
-{
-    double center_x = (x1 + x3) / 2;
-    double center_y = (y1 + y3) / 2;
-
-    if (x0 == center_x && y0 == center_y)
-        return 1;
-
-    double x4 = x1 + x3 - x2;
-    double y4 = y1 + y3 - y2;
-    int count = 0;
-    double arr_x[4] = {x1,x2,x3,x4};
-    double arr_y[4] = {y1,y2,y3,y4};
-
-    for (int i = 0; i < 4; i ++)
-    {
-        int j;
-        if (i == 3)
-            j = 0;
-        else
-            j = i + 1;
-
-        if (intersect(x0,y0,center_x,center_y,arr_x[i],arr_y[i],arr_x[j],arr_y[j]))
-            count ++;
-    }
-
-    if (count % 2 == 1)
-        return 1;
-    else
-        return 0;
 }
 
 double max_3(double n1, double n2, double n3)
@@ -347,60 +306,80 @@ double min_3(double n1, double n2, double n3)
         return n3;
 }
 
-void set_color(Display* d, Window w, int s, dmatrix_t C, unsigned int r, unsigned int g, unsigned int b, double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double intensity)
+double min_4(double n1, double n2, double n3, double n4)
 {
-    SetCurrentColorX(d, &(DefaultGC(d, s)), r * intensity, g * intensity, b * intensity);
-
-    dmatrix_t p1;
-    dmat_alloc(&p1,4,1);
-
-    p1.m[1][1] = x1;
-    p1.m[2][1] = y1;
-    p1.m[3][1] = z1;
-    p1.m[4][1] = 1.0;
-    p1 = *perspective_projection(dmat_mult(&C,&p1));
-
-    dmatrix_t p2;
-    dmat_alloc(&p2,4,1);
-
-    p2.m[1][1] = x2;
-    p2.m[2][1] = y2;
-    p2.m[3][1] = z2;
-    p2.m[4][1] = 1.0;
-    p2 = *perspective_projection(dmat_mult(&C,&p2));    
-
-    dmatrix_t p3;
-    dmat_alloc(&p3,4,1);
-
-    p3.m[1][1] = x1;
-    p3.m[2][1] = y1;
-    p3.m[3][1] = z1;
-    p3.m[4][1] = 1.0;
-    p3 = *perspective_projection(dmat_mult(&C,&p3));
-
-    double x_min = min_3(p1.m[1][1],p2.m[1][1],p3.m[1][1]);
-    double x_max = max_3(p1.m[1][1],p2.m[1][1],p3.m[1][1]);
-    double y_min = min_3(p1.m[2][1],p2.m[2][1],p3.m[2][1]);
-    double y_max = max_3(p1.m[2][1],p2.m[2][1],p3.m[2][1]);
-
-    //printf("x1 = %f, y1 = %f, x2 = %f, y2 = %f, x3 = %f, y3 = %f\n", p1.m[1][1],p1.m[2][1],p2.m[1][1],p2.m[2][1],p3.m[1][1],p3.m[2][1]);
-
-    for (int x = (int) x_min; x < x_max; x ++)
-    {
-        for (int y = (int) y_min; y < y_max; y ++)
-        {
-            if (inside_polygon(x,y,p1.m[1][1],p1.m[2][1],p2.m[1][1],p2.m[2][1],p3.m[1][1],p3.m[2][1]))
-            {
-                //printf("Set: (%d,%d)\n",x,y);
-                SetPixelX(d,w,s,x,y);
-            }
-        }
-    }
-
-    SetCurrentColorX(d, &(DefaultGC(d, s)), 0, 0, 0);
+    if (n1 < min_3(n2,n3,n4))
+        return n1;
+    else if (n2 < min(n3,n4))
+        return n2;
+    else if (n3 < n4)
+        return n3;
+    else return n4;
 }
 
+double max_4(double n1, double n2, double n3, double n4)
+{
+    if (n1 > max_3(n2,n3,n4))
+        return n1;
+    else if (n2 > max(n3,n4))
+        return n2;
+    else if (n3 > n4)
+        return n3;
+    else return n4;
+}
 
+//Return 1 if the two finite lines (in 2D) have a intersection
+int intersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
+{
+    double slope1 = (y2 - y1) / (x2 - x1);
+    double intercept1 = y1 - x1 * slope1;
+    double slope2 = (y4 - y3) / (x4 - x3);
+    double intercept2 = y3 - x3 * slope2;
+    double intersect_x = (intercept2 - intercept1) / (slope1 - slope2);
+    double intersect_y = ((intercept2 - intercept1) / (slope1 - slope2)) * slope1 + intercept1;
+
+    if (intersect_x > min(x1,x2) && intersect_x > min(x3,x4) && intersect_x < max(x1,x2) && intersect_x < max(x3,x4) && intersect_y > min(y1,y2) && intersect_y > min (y3,y4) && intersect_y < max(y1,y2) && intersect_y < max(y3,y4))
+        return 1;
+    else
+        return 0;
+}
+
+//Using Ray-Casting algorithm to determine wheter the point is inside the polygon
+int inside_polygon(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3)
+{
+    double center_x = (x1 + x3) / 2;
+    double center_y = (y1 + y3) / 2;
+
+    if (x0 == center_x && y0 == center_y)
+        return 1;
+
+    double x4 = x1 + x3 - x2;
+    double y4 = y1 + y3 - y2;
+    int count = 0;
+    double arr_x[4] = {x1,x2,x3,x4};
+    double arr_y[4] = {y1,y2,y3,y4};
+
+    //Compare with the line made up of two adjacent points of polygon
+    for (int i = 0; i < 4; i ++)
+    {
+        int j;
+        if (i == 3)
+            j = 0;
+        else
+            j = i + 1;
+
+        if (intersect(x0,y0,center_x,center_y,arr_x[i],arr_y[i],arr_x[j],arr_y[j]))
+            count ++;
+    }
+
+    //According to Ray-Casting algorithm, if the number of interseciton is odd, the point is inside the polygon
+    if (count % 2 == 1)
+        return 1;
+    else
+        return 0;
+}
+
+//Bresenham algorithm given in Assignment 2
 void Bresenham(Display *d, Window w, int s, int x1, int y1, int x2, int y2)
 { int Transx, Transy ;
     int Pi, Dx, Dy, Two_Dx, Two_Dy, i, Inc1stcoord, Inc2ndcoord, Exchange ;
@@ -469,6 +448,7 @@ void Bresenham(Display *d, Window w, int s, int x1, int y1, int x2, int y2)
     }
 }
 
+//Draw a 3D line in 2D 
 void draw_line_3d(Display* d, Window w, int s, dmatrix_t C, double x1, double y1, double z1, double x2, double y2, double z2)
 {
     dmatrix_t p1;
@@ -494,9 +474,42 @@ void draw_line_3d(Display* d, Window w, int s, dmatrix_t C, double x1, double y1
     Bresenham(d,w,s,p1.m[1][1],p1.m[2][1], p2.m[1][1], p2.m[2][1]);
 }
 
-void draw_sphere(Display* d, Window w, int s,dmatrix_t C, dmatrix_t E, double radius, double dt, double dp)
+//Set color to the polygon mesh
+void set_color(Display *d, Window w, int s, dmatrix_t C, int r, int g, int b, double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double x4, double y4, double z4, double intensity)
 {
-    for (double t = 0; t < 2 * M_PI;)
+    //If intensity is smaller than 0, set it to 0, which is black
+    if (intensity < 0)
+        intensity = 0;
+
+    //Change color 
+    SetCurrentColorX(d, &(DefaultGC(d, s)), r * intensity, g * intensity, b * intensity);
+    
+    //Draw parallel lines from p1p2 to p3p4
+    //Issue: p1p2 and p3p4 are not necessarily parallel, might miss some points
+    double d_x = (x4 - x1) / 100;
+    double d_y = (y4 - y1) / 100;
+    double d_z = (z4 - z1) / 100;
+    
+    for (double a1 = x1, b1 = y1, c1 = z1, a2 = x2, b2 = y2, c2 = z2;;)
+    {
+        draw_line_3d(d,w,s,C,a1,b1,c1,a2,b2,c2);
+        a1 += d_x;
+        b1 += d_y;
+        c1 += d_z;
+        a2 += d_x;
+        b2 += d_y;
+        c2 += d_z;
+        if ((a1 > x4 && a1 > x1) || (a1 < x4 && a1 < x1))
+            break;
+    }
+
+    SetCurrentColorX(d, &(DefaultGC(d, s)), 0, 0, 0);
+}
+
+//Draw the sphere, center at origin
+void draw_sphere(Display* d, Window w, int s,dmatrix_t C, dmatrix_t E, dmatrix_t light, double radius, double dt, double dp)
+{
+    for (double t = 0; t < 2 * M_PI; t += dt)
         {
             for (double p = 0; p < M_PI;)
             {
@@ -514,35 +527,42 @@ void draw_sphere(Display* d, Window w, int s,dmatrix_t C, dmatrix_t E, double ra
                 double y3 = radius * sin(t + dt) * sin(p);
                 double z3= radius * cos(p);
 
-                dmatrix_t center;
+                dmatrix_t center; //Center of the sphere
                 dmat_alloc(&center, 4, 1);
                 set_xyz(center,0,0,0);
 
-                dmatrix_t mid;
+                dmatrix_t mid; //Center of the mesh
                 dmat_alloc(&mid,4, 1);
                 set_xyz(mid,(x1 + x3) / 2, (y1 + y3) / 2, (z1 + z3) / 2);
 
-                dmatrix_t outward = get_line(center, mid);
+                dmatrix_t outward = get_line(center, mid); //Vector from center of the sphere to the outside point
 
-                dmatrix_t normal = find_normal(x1,y1,z1,x2,y2,z2,x3,y3,z3);
+                dmatrix_t normal = find_normal(x1,y1,z1,x2,y2,z2,x3,y3,z3); // Normal vector of the surface
 
-                set_color(d,w,s,C,255,0,0,x1,y1,z1,x2,y2,z2,x3,y3,z3,1);
-
+                double x4 = radius * cos(t + dt) * sin(p + dp); 
+                double y4 = radius * sin(t + dt) * sin(p + dp);
+                double z4 = radius * cos(p + dp);
+                
+                //If the angle between outward vector and normal vector is greater than 90 degree, the normal vector is not outward the surface
                 if (find_angle(outward,normal) < 0)
                     set_xyz(normal, 0 - normal.m[1][1], 0 - normal.m[2][1], 0 - normal.m[3][1]);
 
+                //Check if the surface can be seen
                 if (!backside(E,normal))
                 {
-                    draw_line_3d(d,w,s,C,x1,y1,z1,x2,y2,z2);
-                    draw_line_3d(d,w,s,C,x2,y2,z2,x3,y3,z3);   
+                    dmatrix_t light_line = get_line(center,light);
+                    double intensity = find_angle(light_line,normal);
+
+                    //Color of the sphere is red
+                    set_color(d,w,s,C,255,0,0,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,intensity);
                 }
             }
-
-            t += dt;
         }
 }
 
-void draw_torus(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, double radius_a,double radius_c,double t_du,double t_dv)
+
+//Draw the torus, similar as above, center at (30,0,0)
+void draw_torus(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, dmatrix_t light, double radius_a,double radius_c,double t_du,double t_dv)
 {
     for (double t_u = 0; t_u < 2 * M_PI; t_u += t_du)
         {
@@ -556,45 +576,48 @@ void draw_torus(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, double ra
 
                 double x2 = (radius_c + radius_a * cos(t_v)) * cos(t_u) + 30;
                 double y2 = (radius_c + radius_a * cos(t_v)) * sin(t_u);
-                double z2 = radius_a * sin(t_v);
-
-                
+                double z2 = radius_a * sin(t_v);                
 
                 double x3 = (radius_c + radius_a * cos(t_v)) * cos(t_u + t_du) + 30;
                 double y3 = (radius_c + radius_a * cos(t_v)) * sin(t_u + t_du);
                 double z3 = radius_a * sin(t_v);
 
-                /*
+                dmatrix_t mid; //Center of the mesh
+                dmat_alloc(&mid,4, 1);
+                set_xyz(mid,(x1 + x3) / 2, (y1 + y3) / 2, (z1 + z3) / 2);
+
+                dmatrix_t tube_center; //Center of the tube 
+                dmat_alloc(&tube_center, 4, 1);
+                set_xyz(tube_center, radius_c * cos(t_u) + 30, radius_c * sin(t_u), 0);
+
+                dmatrix_t outward = get_line(tube_center, mid);
+
                 dmatrix_t center;
                 dmat_alloc(&center, 4, 1);
                 set_xyz(center,30,0,0);
 
-                dmatrix_t mid;
-                dmat_alloc(&mid,4, 1);
-                set_xyz(mid,(x1 + x2 + x3) / 3, (y1 + y2 + y3) / 3, (z1 + z2 + z3) / 3);
-
-                dmatrix_t outward = get_line(center, mid);
-
-
-                dmatrix_t normal = find_normal(x1,y1,z1,x2,y2,z2,x3,y3,z3);
-    
+                dmatrix_t normal = find_normal(x3,y3,z3,x2,y2,z2,x1,y1,z1);
                 if (find_angle(outward,normal) < 0)
                     set_xyz(normal, 0 - normal.m[1][1], 0 - normal.m[2][1], 0 - normal.m[3][1]);
-                */
 
-                dmatrix_t normal = find_normal(x3,y3,z3,x2,y2,z2,x1,y1,z1);
+                double x4 = (radius_c + radius_a * cos(t_v + t_dv)) * cos(t_u + t_du) + 30;
+                double y4 = (radius_c + radius_a * cos(t_v + t_dv)) * sin(t_u + t_du);
+                double z4 = radius_a * sin(t_v + t_dv);
 
-                set_color(d,w,s,C,0,255,0,x1,y1,z1,x2,y2,z2,x3,y3,z3,1);
                 if (!backside(E,normal))
                 {
-                    draw_line_3d(d,w,s,C,x1,y1,z1,x2,y2,z2);
-                    draw_line_3d(d,w,s,C,x2,y2,z2,x3,y3,z3);   
+                    dmatrix_t light_line = get_line(center,light);
+                    double intensity = find_angle(light_line,normal);
+
+                    //Color of the torus is green
+                    set_color(d,w,s,C,0,255,0,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,intensity);
                 }
             }
         }   
 }
 
-void draw_cone(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, double h, double r, double c_du, double c_dt)
+//Draw the cone, similar as above, center at (0,30,0)
+void draw_cone(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, dmatrix_t light, double h, double r, double c_du, double c_dt)
 {
     for (double u = 0; u < h; u += c_du)
     {
@@ -630,18 +653,18 @@ void draw_cone(Display* d, Window w, int s, dmatrix_t C, dmatrix_t E, double h, 
 
             dmatrix_t normal = find_normal(x3,y3,z3,x2,y2,z2,x1,y1,z1);
                 
-                
-            set_color(d,w,s,C,0,0,255,x1,y1,z1,x2,y2,z2,x3,y3,z3,1);
+            double x4 = ((h - u - c_du) / h) * r * cos(c_t + c_dt);
+            double y4 = ((h - u - c_du) / h) * r * sin(c_t + c_dt) + 30;
+            double z4 = u + c_du;
 
             if (find_angle(outward,normal) < 0)
                 set_xyz(normal, 0 - normal.m[1][1], 0 - normal.m[2][1], 0 - normal.m[3][1]);
 
-            //dmatrix_t normal = find_normal(x3,y3,z3,x2,y2,z2,x1,y1,z1);
-
             if (!backside(E,normal))
             {
-                draw_line_3d(d,w,s,C,x1,y1,z1,x2,y2,z2);
-                draw_line_3d(d,w,s,C,x2,y2,z2,x3,y3,z3);   
+                dmatrix_t light_line = get_line(center,light);
+                double intensity = find_angle(light_line,normal);
+                set_color(d,w,s,C,0,0,255,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,intensity);  
             }
         }
     }
@@ -685,33 +708,32 @@ int main()
     
     SetCurrentColorX(d, &(DefaultGC(d, s)), r, g, b);
 
-    printf("Inside?: %d\n",inside_polygon(0,0,1,0,0,1,-1,0));
-
     while (1) {
         XNextEvent(d, &e) ;
 
-        draw_line_3d(d,w,s,C,0,0,0,50,0,0);
-        draw_line_3d(d,w,s,C,0,0,0,0,50,0);
+        dmatrix_t light;
+        dmat_alloc(&light,4,1);
+        set_xyz(light,LX,LY,LZ); //Source of light defined at line 41
 
         double radius = 5.0; //Radius of the sphere
-        double dt = 2.0 * M_PI / 40.0; //Change in Longitude
-        double dp = M_PI / 20.0; //Change in Latitude
+        double dt = 2.0 * M_PI / 100.0; //Change in Longitude
+        double dp = M_PI / 50.0; //Change in Latitude
 
-        draw_sphere(d,w,s,C,E,radius,dt,dp);
+        draw_sphere(d,w,s,C,E,light,radius,dt,dp);
 
         double radius_a = 2.0; // Radius of the tube
         double radius_c = 8.0; // Radius from the center of the hole to the center of the tube
-        double t_du = M_PI / 20; // Change around the center of the tube
-        double t_dv = M_PI / 10; // Change around the center of the hole
+        double t_du = M_PI / 30; // Change around the center of the tube
+        double t_dv = M_PI / 60; // Change around the center of the hole
 
-        draw_torus(d,w,s,C,E,radius_a,radius_c,t_du,t_dv);
+        draw_torus(d,w,s,C,E,light,radius_a,radius_c,t_du,t_dv);
 
-        double height = 12;
-        double c_radious = 6;
-        double c_dt = M_PI / 20;
-        double c_du = 1;
+        double height = 12; //Height of the cone
+        double c_radious = 6;//Radius of the base of the cone
+        double c_dt = M_PI / 50;//Change around the center of base
+        double c_du = 1;//Change of height
 
-        draw_cone(d,w,s,C,E,height,c_radious,c_du,c_dt);
+        draw_cone(d,w,s,C,E,light,height,c_radious,c_du,c_dt);
 
         if(e.type == KeyPress)
             break ;
