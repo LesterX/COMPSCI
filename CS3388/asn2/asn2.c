@@ -316,7 +316,7 @@ int main()
 
     //Here's my work
 	
-	double radius = 5.0; //Radius of the sphere
+	double radius = 10.0; //Radius of the sphere
     double dt = 2.0 * M_PI / 20.0; //Change in Longitude
     double dp = M_PI / 10.0; //Change in Latitude
 
