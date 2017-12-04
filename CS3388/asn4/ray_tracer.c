@@ -18,9 +18,9 @@
 #define N_OBJECTS        1024
 #define MAX_INTENSITY    255.0
 
-#define Ex               5.0
-#define Ey               5.0
-#define Ez               3.0
+#define Ex               0.0
+#define Ey               -6.0
+#define Ez               6.0
 
 #define Gx               0.0
 #define Gy               0.0
@@ -30,9 +30,9 @@
 #define UPy              0.0
 #define UPz              1.0
 
-#define Lx               24.0
-#define Ly               3.0
-#define Lz               10.0
+#define Lx               0.0
+#define Ly               0.0
+#define Lz               8.0
 
 #define Near             1.0
 #define Far              25.0
@@ -40,7 +40,7 @@
 #define THETA            45.0
 #define ASPECT           1.5
 
-#define H                200
+#define H                300
 
 typedef struct {
     int width, height ;
@@ -240,6 +240,7 @@ double sphere_intersection(dmatrix_t *e, dmatrix_t *d) {
     }
 }
 
+
 dmatrix_t *normal_to_surface(object_t *object, dmatrix_t *intersection) {
     
     dmatrix_t *normal ;
@@ -319,7 +320,7 @@ dmatrix_t *vector_to_light_source(dmatrix_t *intersection, dmatrix_t *light_posi
     s = dmat_sub(light_position,intersection) ;
     sn = dmat_normalize(s) ;
     delete_dmatrix(s) ;
-    
+
     return sn ;
 }
 
@@ -454,6 +455,175 @@ dmatrix_t *init_matrix(double x, double y, double z)
     return matrix;
 }
 
+color_t add_intensity(object_t *shape, dmatrix_t *s, dmatrix_t *v,dmatrix_t *n, dmatrix_t *r, light_t light)
+{
+    color_t light_intensity = light.intensity;
+    double intensity_r, intensity_g, intensity_b;
+    double ai_r, ai_g, ai_b;
+    double di_r, di_g, di_b;
+    double si_r, si_g, si_b;
+
+    ai_r = shape->ambient_color.r * shape->ambient_coeff * 255;
+    ai_g = shape->ambient_color.g * shape->ambient_coeff * 255;
+    ai_b = shape->ambient_color.b * shape->ambient_coeff * 255;
+
+    double SxN = ddot_product(s,n);
+    if (SxN < 0) SxN = 0;
+
+    di_r = shape->diffuse_color.r * SxN * light_intensity.r * shape->diffuse_coeff * 255;
+    di_g = shape->diffuse_color.g * SxN * light_intensity.g * shape->diffuse_coeff * 255;
+    di_b = shape->diffuse_color.b * SxN * light_intensity.b * shape->diffuse_coeff * 255;
+
+
+    double RxV = pow(ddot_product(r,v), shape->f);
+    if (RxV < 0) RxV = 0;
+
+    si_r = shape->specular_color.r * RxV * light_intensity.r * shape->specular_coeff * 255;
+    si_g = shape->specular_color.g * RxV * light_intensity.g * shape->specular_coeff * 255;
+    si_b = shape->specular_color.b * RxV * light_intensity.b * shape->specular_coeff * 255;
+
+    intensity_r = ai_r + di_r + si_r;
+    intensity_g = ai_g + di_g + si_g;
+    intensity_b = ai_b + di_b + si_b;
+
+    color_t color = color_init(intensity_r, intensity_g, intensity_b);
+
+    //printf("R %f   G %f   B %f\n", color.r,color.g,color.b);
+
+    return color;
+}
+
+int shadowed(dmatrix_t *s, dmatrix_t *intersect, object_t *object, int nobjects)
+{
+    for (int k = 0; k < nobjects; k ++)
+    {
+        object_t* shape = &object[k];
+        dmatrix_t *M_inverse = dmat_inverse(&shape->M);
+
+        if (shape->type == 0);
+        else if (shape->type == 1)
+        {
+            double u = plane_intersection(dmat_mult(M_inverse,intersect), dmat_mult(M_inverse, s));
+            if (u > 0 && u < 1)
+            { 
+                return 1;   
+            }
+        }else if (shape->type == 2)
+        {
+            double u = sphere_intersection(dmat_mult(M_inverse,intersect), dmat_mult(M_inverse, s));
+            if (u > 0 && u < 1) 
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+color_t add_intensity_shadow(object_t *shape)
+{
+    double ai_r = shape->ambient_color.r * shape->ambient_coeff * 255;
+    double ai_g = shape->ambient_color.g * shape->ambient_coeff * 255;
+    double ai_b = shape->ambient_color.b * shape->ambient_coeff * 255;
+
+    //if (shape->type == 1)
+        //printf("AR: %f, AG: %f, AB: %f\n", ai_r, ai_g, ai_b);
+
+    return color_init(ai_r,ai_g,ai_b);
+}
+
+color_t get_color(object_t *object, int nobjects, dmatrix_t *point, dmatrix_t *direction, light_t light)
+{
+    dmatrix_t light_position = light.position;
+    color_t color = color_init(50.0,50.0,50.0);
+
+    double t_min = INFTY;
+    int smallest_index = 0, done = 0;
+
+    for (int i = 0; i < nobjects; i ++)
+    {
+        object_t* shape = &object[i];
+        dmatrix_t *M_inverse = dmat_inverse(&shape->M);
+        if (shape->type == 0);
+        else if (shape->type == 1)
+        {
+            //printf("Checking plane\n");
+            double t = plane_intersection(dmat_mult(M_inverse,point),dmat_mult(M_inverse,direction));
+            if (t < t_min && t > 0)
+            {
+                t_min = t;
+                smallest_index = i;
+            }
+
+            if (done)
+            {
+                //dmatrix_t *intersect = dmat_mult(&shape->M, intersection_coordinates(dmat_mult(M_inverse, point),dmat_mult(M_inverse, direction),t_min));
+                dmatrix_t *intersect = intersection_coordinates(point,direction,t_min);
+                dmatrix_t *source = dmat_mult(M_inverse,&light_position);
+
+                dmatrix_t *s = vector_to_light_source(intersect,source);
+                dmatrix_t *v = vector_to_center_of_projection(intersect,dmat_mult(M_inverse, point));
+                dmatrix_t *n = normal_to_surface(shape,intersect);
+                dmatrix_t *r = vector_to_specular_reflection(n,s);
+
+                if (!shadowed(s,intersect,object,nobjects))
+                    color = add_intensity(shape,s,v,n,r,light);
+                else
+                    color = add_intensity_shadow(shape);
+
+                break;
+            }
+
+            if (i == nobjects - 1 && t_min != INFTY)
+            {
+                i = smallest_index - 1;
+                done = 1;
+            }
+        }else if (shape->type == 2)
+        {
+            double t = sphere_intersection(dmat_mult(M_inverse,point),dmat_mult(M_inverse,direction));
+            if (t < t_min && t > 0)
+            {
+                t_min = t;
+                smallest_index = i;
+            }
+
+            if (done)
+            {
+                //dmatrix_t *intersect = dmat_mult(&shape->M, intersection_coordinates(dmat_mult(M_inverse, point),dmat_mult(M_inverse, direction),t_min));
+                dmatrix_t *intersect = intersection_coordinates(point,direction,t_min);
+                dmatrix_t *source = dmat_mult(M_inverse,&light_position);
+
+                dmatrix_t *s = vector_to_light_source(intersect, source);
+                dmatrix_t *v = vector_to_center_of_projection(intersect,dmat_mult(M_inverse, point));
+                dmatrix_t *n = normal_to_surface(shape,intersect);
+                dmatrix_t *r = vector_to_specular_reflection(n,s);
+
+                if (!shadowed(s,intersect,object,nobjects))
+                    color = add_intensity(shape,s,v,n,r,light);
+                else
+                    color = add_intensity_shadow(shape);
+                break;
+            }
+
+            if (i == nobjects - 1 && t_min != INFTY)
+            {
+                i = smallest_index - 1;
+                done = 1;
+            }
+        }else
+            return color;
+    }
+
+    if (color.r > 255) color.r = 255;
+    if (color.g > 255) color.g = 255;
+    if (color.b > 255) color.b = 255;
+
+    return color;
+}
+
+
+
 int main() {
     
     Display *d ;
@@ -505,8 +675,7 @@ int main() {
     M = *dmat_identity(&M) ;
 
     M.m[1][4] = 0.0 ;
-    M.m[2][4] = 0.0 ;
-    M.m[3][3] = 2.0 ;
+    M.m[2][4] = -2.0 ;
     
     reflectivity = 0.2 ;
     
@@ -528,7 +697,67 @@ int main() {
     
     object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
     
-    /* Create tiled floor with planes */
+    
+    //Sphere 2
+    
+    dmat_alloc(&M,4,4) ;
+    M = *dmat_identity(&M) ;
+    
+    M.m[1][4] = 4.0 ;
+    M.m[2][4] = 2.0 ;
+    M.m[3][3] = 2.0 ;
+ 
+    
+    reflectivity = 0.2 ;
+    
+    specular_color.r = 1.0 ;
+    specular_color.g = 1.0 ;
+    specular_color.b = 1.0 ;
+    specular_coeff = 0.4 ;
+    f = 10.0 ;
+    
+    diffuse_color.r = 1.0 ;
+    diffuse_color.g = 0.0 ;
+    diffuse_color.b = 0.0 ;
+    diffuse_coeff = 0.4 ;
+    
+    ambient_color.r = 1.0 ;
+    ambient_color.g = 0.0 ;
+    ambient_color.b = 0.0 ;
+    ambient_coeff = 0.2 ;
+    
+    object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
+
+    //Sphere 3
+    dmat_alloc(&M,4,4) ;
+    M = *dmat_identity(&M) ;
+
+    M.m[1][4] = -4.0 ;
+    M.m[2][4] = 2.0 ;
+    M.m[3][3] = 2.0 ;
+    
+    reflectivity = 0.2 ;
+    
+    specular_color.r = 1.0 ;
+    specular_color.g = 1.0 ;
+    specular_color.b = 1.0 ;
+    specular_coeff = 0.4 ;
+    f = 10.0 ;
+    
+    diffuse_color.r = 1.0 ;
+    diffuse_color.g = 0.0 ;
+    diffuse_color.b = 1.0 ;
+    diffuse_coeff = 0.4 ;
+    
+    ambient_color.r = 1.0 ;
+    ambient_color.g = 1.0 ;
+    ambient_color.b = 0.0 ;
+    ambient_coeff = 0.2 ;
+    
+    object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
+    
+    /*
+    //Create tiled floor with planes
     
     for (i = -4 ; i < 4 ; i++) {
         for (j = -4 ; j < 4 ; j++) {
@@ -545,23 +774,54 @@ int main() {
             specular_color.r = 1.0 ;
             specular_color.g = 1.0 ;
             specular_color.b = 1.0 ;
-            specular_coeff = 0.0 ;
+            specular_coeff = 0.2 ;
             f = 10.0 ;
     
             diffuse_color.r = 1.0 ;
             diffuse_color.g = 1.0 ;
             diffuse_color.b = 1.0 ;
-            diffuse_coeff = 0.0 ;
+            diffuse_coeff = 0.2 ;
     
             ambient_color.r = (double)(abs(i+j)%2) ;
             ambient_color.g = (double)(abs(i+j)%2) ;
             ambient_color.b = (double)(abs(i+j)%2) ;
-            ambient_coeff = 1.0 ;
+            ambient_coeff = 0.6 ;
             
             object[nobjects] = *build_object(PLANE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
         }
     }
+    */
     
+    
+    dmat_alloc(&M,4,4) ;
+    M = *dmat_identity(&M) ;
+
+    M.m[1][1] = 2.0;
+    M.m[2][2] = 2.0; 
+    M.m[3][4] = -1.5;
+
+    reflectivity = 0.1 ;
+
+    specular_color.r = 1.0 ;
+    specular_color.g = 1.0 ;
+    specular_color.b = 1.0 ;
+    specular_coeff = 0.4 ;
+    f = 10.0 ;
+
+    diffuse_color.r = 1.0 ;
+    diffuse_color.g = 1.0 ;
+    diffuse_color.b = 1.0 ;
+    diffuse_coeff = 0.4 ;
+
+    ambient_color.r = 1.0 ;
+    ambient_color.g = 1.0 ;
+    ambient_color.b = 1.0 ;
+    ambient_coeff = 0.2 ;
+    
+    object[nobjects] = *build_object(PLANE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
+    
+
+ 
     /* Set near plane dimensions */
     
     aspect = ASPECT ;
@@ -579,58 +839,17 @@ int main() {
             
             for (i = 0 ; i < Window.width ; i++) {
                 for (j = 0  ; j < Window.height ; j++) {
-                    double intensity;
                     direction = ray_direction(&Camera,&Window,height,width,(double)i,(double)j) ;
                     pixel = shade(&light,object,&Camera.E,direction,pixel,background) ;
                     double t = INFTY;
 
-                    for (int k = 0; k < nobjects; k ++)
-                    {
-                        object_t* shape = &object[k];
-                        if (shape->type == 0) //Infinite plane
-                        {
+                    color_t color = get_color(object,nobjects,&Camera.E,direction,light);
+                    SetCurrentColorX(d,&(DefaultGC(d,s)),color.r,color.g,color.b);
+                    SetPixelX(d,w,s,i,Window.height - (j + 1)) ;
 
-                        }else if (shape->type == 1) //Plane
-                        {
-                            double t1 = plane_intersection(&Camera.E,direction);
-                            if (t1 > 0 && t1 < t)
-                            {
-                                t = t1;
-                                dmatrix_t *M_inverse = dmat_inverse(&shape->M);
-                                dmatrix_t *intersect = dmat_mult(M_inverse,intersection_coordinates(&Camera.E,direction,t));
-                                dmatrix_t *normal = init_matrix(0,0,1);
-                                dmatrix_t *source = vector_to_light_source(intersect,&light_position);
-                                double di = ddot_product(dmat_normalize(source),dmat_normalize(normal));
-
-                                if (di < 0)
-                                    di = 0;
-
-                                SetCurrentColorX(d,&(DefaultGC(d,s)),200 * di ,200 * di,200 * di);
-                                SetPixelX(d,w,s,i,Window.height - (j + 1)) ;
-                            }
-                        }else if (shape->type == 2) //Sphere
-                        {
-                            double t2 = sphere_intersection(&Camera.E, direction);
-                            if (t2 > 0 && t2 < t)
-                            {
-                                t = t2;
-                                dmatrix_t *M_inverse = dmat_inverse(&shape->M);
-                                dmatrix_t *intersect = dmat_mult(M_inverse,intersection_coordinates(&Camera.E,direction,t));
-                                dmatrix_t *normal = intersect;
-                                dmatrix_t *source = vector_to_light_source(intersect,&light_position);
-                                double di = ddot_product(dmat_normalize(source),dmat_normalize(normal));
-
-                                if (di < 0)
-                                    di = 0;
-
-                                SetCurrentColorX(d,&(DefaultGC(d,s)),150 * di,100 * di,200 * di);
-                                SetPixelX(d,w,s,i,Window.height - (j + 1)) ;
-                            }
-                        }
-                    }
                     delete_dmatrix(direction) ;
-                    
                 }
+
             }
         }
         if (e.type == KeyPress)
