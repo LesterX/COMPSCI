@@ -19,7 +19,7 @@
 #define MAX_INTENSITY    255.0
 
 #define Ex               0.0
-#define Ey               -6.0
+#define Ey               -10.0
 #define Ez               6.0
 
 #define Gx               0.0
@@ -558,7 +558,7 @@ color_t get_color(object_t *object, int nobjects, dmatrix_t *point, dmatrix_t *d
             if (done)
             {
                 //dmatrix_t *intersect = dmat_mult(&shape->M, intersection_coordinates(dmat_mult(M_inverse, point),dmat_mult(M_inverse, direction),t_min));
-                dmatrix_t *intersect = intersection_coordinates(point,direction,t_min);
+                dmatrix_t *intersect = dmat_mult(M_inverse,intersection_coordinates(point,direction,t_min));
                 dmatrix_t *source = dmat_mult(M_inverse,&light_position);
 
                 dmatrix_t *s = vector_to_light_source(intersect,source);
@@ -566,7 +566,7 @@ color_t get_color(object_t *object, int nobjects, dmatrix_t *point, dmatrix_t *d
                 dmatrix_t *n = normal_to_surface(shape,intersect);
                 dmatrix_t *r = vector_to_specular_reflection(n,s);
 
-                if (!shadowed(s,intersect,object,nobjects))
+                if (!shadowed(s,dmat_mult(&shape->M,intersect),object,nobjects))
                     color = add_intensity(shape,s,v,n,r,light);
                 else
                     color = add_intensity_shadow(shape);
@@ -591,7 +591,7 @@ color_t get_color(object_t *object, int nobjects, dmatrix_t *point, dmatrix_t *d
             if (done)
             {
                 //dmatrix_t *intersect = dmat_mult(&shape->M, intersection_coordinates(dmat_mult(M_inverse, point),dmat_mult(M_inverse, direction),t_min));
-                dmatrix_t *intersect = intersection_coordinates(point,direction,t_min);
+                dmatrix_t *intersect = dmat_mult(M_inverse, intersection_coordinates(point,direction,t_min));
                 dmatrix_t *source = dmat_mult(M_inverse,&light_position);
 
                 dmatrix_t *s = vector_to_light_source(intersect, source);
@@ -599,7 +599,7 @@ color_t get_color(object_t *object, int nobjects, dmatrix_t *point, dmatrix_t *d
                 dmatrix_t *n = normal_to_surface(shape,intersect);
                 dmatrix_t *r = vector_to_specular_reflection(n,s);
 
-                if (!shadowed(s,intersect,object,nobjects))
+                if (!shadowed(s,dmat_mult(&shape->M,intersect),object,nobjects))
                     color = add_intensity(shape,s,v,n,r,light);
                 else
                     color = add_intensity_shadow(shape);
@@ -675,7 +675,8 @@ int main() {
     M = *dmat_identity(&M) ;
 
     M.m[1][4] = 0.0 ;
-    M.m[2][4] = -2.0 ;
+    M.m[2][4] = 0.0 ;
+    M.m[3][4] = -1.0;
     
     reflectivity = 0.2 ;
     
@@ -703,6 +704,8 @@ int main() {
     dmat_alloc(&M,4,4) ;
     M = *dmat_identity(&M) ;
     
+    M.m[1][1] = 2.0 ;
+    M.m[2][2] = 2.0 ;
     M.m[1][4] = 4.0 ;
     M.m[2][4] = 2.0 ;
     M.m[3][3] = 2.0 ;
@@ -716,14 +719,14 @@ int main() {
     specular_coeff = 0.4 ;
     f = 10.0 ;
     
-    diffuse_color.r = 1.0 ;
-    diffuse_color.g = 0.0 ;
-    diffuse_color.b = 0.0 ;
+    diffuse_color.r = 0.4 ;
+    diffuse_color.g = 1.0 ;
+    diffuse_color.b = 1.0 ;
     diffuse_coeff = 0.4 ;
     
-    ambient_color.r = 1.0 ;
-    ambient_color.g = 0.0 ;
-    ambient_color.b = 0.0 ;
+    ambient_color.r = 0.4 ;
+    ambient_color.g = 1.0 ;
+    ambient_color.b = 1.0 ;
     ambient_coeff = 0.2 ;
     
     object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
@@ -732,9 +735,11 @@ int main() {
     dmat_alloc(&M,4,4) ;
     M = *dmat_identity(&M) ;
 
+    M.m[1][1] = 2.0 ;
+    M.m[2][2] = 2.0 ;
     M.m[1][4] = -4.0 ;
-    M.m[2][4] = 2.0 ;
-    M.m[3][3] = 2.0 ;
+    M.m[2][4] = 2.0  ;
+    M.m[3][3] = 2.0  ;
     
     reflectivity = 0.2 ;
     
@@ -744,19 +749,49 @@ int main() {
     specular_coeff = 0.4 ;
     f = 10.0 ;
     
-    diffuse_color.r = 1.0 ;
-    diffuse_color.g = 0.0 ;
+    diffuse_color.r = 0.4 ;
+    diffuse_color.g = 1.0 ;
     diffuse_color.b = 1.0 ;
     diffuse_coeff = 0.4 ;
     
-    ambient_color.r = 1.0 ;
+    ambient_color.r = 0.4 ;
     ambient_color.g = 1.0 ;
-    ambient_color.b = 0.0 ;
+    ambient_color.b = 1.0 ;
     ambient_coeff = 0.2 ;
     
     object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
     
-    /*
+    //Sphere 4
+    dmat_alloc(&M,4,4) ;
+    M = *dmat_identity(&M) ;
+
+    M.m[1][4] = 0.0 ;
+    M.m[1][1] = 4.0 ;
+    M.m[2][2] = 0.5 ;
+    M.m[2][4] = -3.0 ;
+    M.m[3][4] = -1.0 ;
+    
+    reflectivity = 0.2 ;
+    
+    specular_color.r = 1.0 ;
+    specular_color.g = 1.0 ;
+    specular_color.b = 1.0 ;
+    specular_coeff = 0.4 ;
+    f = 10.0 ;
+    
+    diffuse_color.r = 0.8 ;
+    diffuse_color.g = 0.4 ;
+    diffuse_color.b = 0.0 ;
+    diffuse_coeff = 0.4 ;
+    
+    ambient_color.r = 0.8 ;
+    ambient_color.g = 0.4 ;
+    ambient_color.b = 0.0 ;
+    ambient_coeff = 0.2 ;
+    
+    object[nobjects] = *build_object(SPHERE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
+
+    
     //Create tiled floor with planes
     
     for (i = -4 ; i < 4 ; i++) {
@@ -790,15 +825,15 @@ int main() {
             object[nobjects] = *build_object(PLANE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
         }
     }
-    */
     
     
+    /*
     dmat_alloc(&M,4,4) ;
     M = *dmat_identity(&M) ;
 
     M.m[1][1] = 2.0;
     M.m[2][2] = 2.0; 
-    M.m[3][4] = -1.5;
+    M.m[3][4] = -2.0;
 
     reflectivity = 0.1 ;
 
@@ -820,7 +855,7 @@ int main() {
     
     object[nobjects] = *build_object(PLANE,&M,ambient_color,diffuse_color,specular_color,ambient_coeff,diffuse_coeff,specular_coeff,f,reflectivity) ;
     
-
+    */
  
     /* Set near plane dimensions */
     
