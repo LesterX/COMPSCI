@@ -1,0 +1,13 @@
+dep1 d acc1 1000 d acc2 3000
+dep2 d acc1 2000 d acc2 2000
+
+c1 d acc1 100 w acc2 500 t acc1 acc2 25
+c2 w acc1 2500 t acc1 acc2 150
+c3 d acc2 200 t acc2 acc1 50
+c4 w acc1 700 t acc1 acc2 150
+c5 d acc1 100 w acc2 500 t acc1 acc2 250
+c6 w acc1 500 t acc1 acc2 150
+c7 d acc1 500 w acc2 700
+c8 d acc2 350 t acc2 acc1 50
+c9 w acc1 1000 w acc2 500
+c10 d acc1 50 d acc2 200
