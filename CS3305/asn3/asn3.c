@@ -1,3 +1,10 @@
+/*
+Computer Science 3305
+Assignment 3
+Yimin Xu
+250876566
+*/
+
 #include<stdio.h>
 #include<string.h>
 #include<pthread.h>
@@ -36,6 +43,7 @@ int *find_account(int account)
 		return &balance_acc5;
 }
 
+//Thread function
 void *bank_account_request(void* rqst)
 {
 	request *rq = (request*) rqst;
@@ -110,6 +118,7 @@ int main(void)
 
     while(fgets(line,sizeof(line),fp))
     {
+    	//Build a request, separate depositors and clients
 
     	char *str = strtok(line," ");
     	char user = str[0];
@@ -158,31 +167,31 @@ int main(void)
 					//printf("Client Count = %d!!!!!!!!\n\n\n",c_count);
 			    }
 	    		
-
 	    		str = strtok(NULL," ");
-
 	    		c_rq[c_count].amount = atoi(str);
-
 	    		str = strtok(NULL," ");
-	    			
 	    		c_count ++;
     		}
     	}
     }
 
     fclose(fp);
+    //Read completed
 
     int err_thread;
     
     pthread_t* ptr_d = malloc(sizeof(pthread_t) * d_count);
     pthread_t* ptr_c = malloc(sizeof(pthread_t) * c_count);
 
+
+    //Set the lock
     if (pthread_mutex_init(&lock, NULL) != 0)
 	{
 	        printf("\n mutex init failed\n");
 	        return 1;
 	}
 
+	//Create the threads, do the depositors first
     for (int i = 0; i < d_count; i ++)
     {
 		err_thread = pthread_create(&ptr_d[i], NULL, bank_account_request, (void *) &d_rq[i]);
@@ -205,6 +214,7 @@ int main(void)
 
     pthread_mutex_destroy(&lock);
 
+    //Print the output to the file 
     fp = fopen("Assignment_3_output_file.txt","w");
     if (fp == NULL)
     {
